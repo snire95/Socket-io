@@ -2,11 +2,23 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const port = process.env.PORT || 8080;
-// const index = require("./routes/index");
+const mongoConnect = require('./util/database').mongoConnect;
+const getDb = require('./util/database').getDb;
+
 const app = express();
-// app.use(index);
+function sleep(milliseconds) {
+  const date = Date.now();
+  let currentDate = null;
+  do {
+    currentDate = Date.now();
+  } while (currentDate - date < milliseconds);
+}
 var cors = require('cors')
 app.use(cors())
+mongoConnect(() => {
+  app.listen(3001)
+})
+
 
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -18,39 +30,46 @@ const io = socketIo(server, {
   }
 });
 
-let interval;
 
-// io.on('connection', (socket) => { /* socket object may be used to send specific messages to the new connected client */
-//     console.log('new client connected');
-//     socket.emit('connection', null);
-// });
-// io.on("connection", (socket) => {
-//   console.log("snir");
-//   socket.on("disconnect", ()=>{
-//     console.log("Disconnected")
-//   })
-// });
 
 io.on("connection", (socket) => {
   console.log(`New client ${socket.id} connected`);
-  socket.on('chat message', (msg) => {
-    console.log(`${socket.id} new message : ` + msg);
-    io.emit("FromAPI", msg);
+  const db = getDb();
+  const { roomId } = socket.handshake.query;
+  console.log(roomId);
+  socket.join(roomId);
+
+
+  // const { roomId } = socket.handshake.query;
+  // socket.join(roomId);
+  
+  // socket.on('Recover messages', (socket_id) => {
+      db.collection(roomId).find({}).toArray(function(err, result) {
+        // message = [result,socket_id]
+        console.log("test");
+        console.log(result.length);
+        if(result.length != 0){
+          socket.emit("allMessage", result); 
+
+        }
   });
-  // if (interval) {
-  //   clearInterval(interval);
-  // }
-  // interval = setInterval(() => getApiAndEmit(socket), 1000);
-  // socket.on("disconnect", () => {
-  //   console.log("Client disconnected");
-  //   clearInterval(interval);
   // });
+  //   socket.on('join', (room) => {
+  //     console.log(`Socket ${socket.id} joining ${room}`);
+  //     socket.join(room);
+  // });
+
+  socket.on('chat message', (msg) => {
+  db.collection(roomId).insertOne(msg)
+  console.log(`${socket.id} new message : ` + msg.content);
+  console.log(msg)
+  socket.in(roomId).emit("send message", msg);
+
 });
 
-const getApiAndEmit = socket => {
-  const response = new Date();
-  console.log(response);
-  socket.emit("FromAPI", response);
-};
+
+});
+
+
 
 server.listen(port, () => console.log(`Listening on port ${port}`));
