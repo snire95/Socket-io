@@ -4,7 +4,7 @@ const MongoClient = mongodb.MongoClient;
 let _db;
 
 const mongoConnect = callback => {
- MongoClient.connect('mongodb+srv://snir_el:wiQS81wS8RL8NyhR@cluster0.vfqzm.mongodb.net/shop?retryWrites=true', {
+ MongoClient.connect('mongodb+srv://snir_el:wiQS81wS8RL8NyhR@cluster0.vfqzm.mongodb.net/Chat?retryWrites=true', {
   useUnifiedTopology: true ,
  }
  )
@@ -26,7 +26,6 @@ const getDb = () =>{
  }
  return 'No database found!'
 };
-// module.exports = mongoConnect;
 
 exports.mongoConnect = mongoConnect;
 exports.getDb = getDb;

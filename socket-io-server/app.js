@@ -4,21 +4,33 @@ const socketIo = require("socket.io");
 const port = process.env.PORT || 8080;
 const mongoConnect = require('./util/database').mongoConnect;
 const getDb = require('./util/database').getDb;
+// const reactCryptGsm = require("./../lib/index.js") 
+
+
 
 const app = express();
-function sleep(milliseconds) {
-  const date = Date.now();
-  let currentDate = null;
-  do {
-    currentDate = Date.now();
-  } while (currentDate - date < milliseconds);
-}
 var cors = require('cors')
 app.use(cors())
 mongoConnect(() => {
   app.listen(3001)
 })
+app.use(express.json());
+app.post('/find-user', function(request, response){
+  const db = getDb();
+  user = {
+    name : request.body.user.name,
+    email : request.body.user.email
+  }
+    db.collection("User").insertOne(user)
+    console.log(request.body.user.name);
+    console.log(request.body.user.email);
+});
 
+// app.post("/find-user" , (rec, res) => {
+//   // console.log(rec);
+//   console.log(res);
+
+// })
 
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -30,41 +42,34 @@ const io = socketIo(server, {
   }
 });
 
-
-
 io.on("connection", (socket) => {
   console.log(`New client ${socket.id} connected`);
   const db = getDb();
   const { roomId } = socket.handshake.query;
-  console.log(roomId);
+  console.log(socket.handshake);
   socket.join(roomId);
 
-
-  // const { roomId } = socket.handshake.query;
-  // socket.join(roomId);
-  
-  // socket.on('Recover messages', (socket_id) => {
-      db.collection(roomId).find({}).toArray(function(err, result) {
-        // message = [result,socket_id]
-        console.log("test");
-        console.log(result.length);
-        if(result.length != 0){
-          socket.emit("allMessage", result); 
-
-        }
+  db.collection(roomId).find({}).toArray(function(err, result) {
+    if(result.length != 0){
+      socket.emit("allMessage", result); 
+    }
   });
-  // });
-  //   socket.on('join', (room) => {
-  //     console.log(`Socket ${socket.id} joining ${room}`);
-  //     socket.join(room);
-  // });
+    socket.on('new User', (user) => {
+            console.log("new User");
 
+      console.log(user);
+  
+});
   socket.on('chat message', (msg) => {
+    console.log(roomId);
   db.collection(roomId).insertOne(msg)
-  console.log(`${socket.id} new message : ` + msg.content);
-  console.log(msg)
   socket.in(roomId).emit("send message", msg);
-
+});
+  socket.on("delete message", (id) => {
+      value = {_id : id }
+      db.collection(roomId).deleteOne(value, function(err, obj) {
+      });
+  socket.in(roomId).emit('delete', id);
 });
 
 
